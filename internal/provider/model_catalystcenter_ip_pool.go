@@ -20,6 +20,8 @@ package provider
 // Section below is generated&owned by "gen/generator.go". //template:begin imports
 import (
 	"context"
+	"strconv"
+	"strings"
 
 	"github.com/CiscoDevNet/terraform-provider-catalystcenter/internal/provider/helpers"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -94,37 +96,37 @@ func (data IPPool) toBody(ctx context.Context, state IPPool) string {
 
 // Section below is generated&owned by "gen/generator.go". //template:begin fromBody
 func (data *IPPool) fromBody(ctx context.Context, res gjson.Result) {
-	if value := res.Get("name"); value.Exists() {
+	if value := res.Get("response.ipPoolName"); value.Exists() {
 		data.Name = types.StringValue(value.String())
 	} else {
 		data.Name = types.StringNull()
 	}
-	if value := res.Get("poolType"); value.Exists() {
+	if value := res.Get("response.ipPoolType"); value.Exists() {
 		data.PoolType = types.StringValue(value.String())
 	} else {
 		data.PoolType = types.StringNull()
 	}
-	if value := res.Get("addressSpace.subnet"); value.Exists() {
+	if value := res.Get("response.ipPoolCidr"); value.Exists() {
 		data.AddressSpaceSubnet = types.StringValue(value.String())
 	} else {
 		data.AddressSpaceSubnet = types.StringNull()
 	}
-	if value := res.Get("addressSpace.prefixLength"); value.Exists() {
+	if value := res.Get("response.ipPoolCidr"); value.Exists() {
 		data.AddressSpacePrefixLength = types.Int64Value(value.Int())
 	} else {
 		data.AddressSpacePrefixLength = types.Int64Null()
 	}
-	if value := res.Get("addressSpace.gatewayIpAddress"); value.Exists() {
+	if value := res.Get("response.gateways.0"); value.Exists() {
 		data.AddressSpaceGateway = types.StringValue(value.String())
 	} else {
 		data.AddressSpaceGateway = types.StringNull()
 	}
-	if value := res.Get("addressSpace.dhcpServers"); value.Exists() && len(value.Array()) > 0 {
+	if value := res.Get("response.dhcpServerIps"); value.Exists() && len(value.Array()) > 0 {
 		data.AddressSpaceDhcpServers = helpers.GetStringSet(value.Array())
 	} else {
 		data.AddressSpaceDhcpServers = types.SetNull(types.StringType)
 	}
-	if value := res.Get("addressSpace.dnsServers"); value.Exists() && len(value.Array()) > 0 {
+	if value := res.Get("response.dnsServerIps"); value.Exists() && len(value.Array()) > 0 {
 		data.AddressSpaceDnsServers = helpers.GetStringSet(value.Array())
 	} else {
 		data.AddressSpaceDnsServers = types.SetNull(types.StringType)
@@ -135,37 +137,38 @@ func (data *IPPool) fromBody(ctx context.Context, res gjson.Result) {
 
 // Section below is generated&owned by "gen/generator.go". //template:begin updateFromBody
 func (data *IPPool) updateFromBody(ctx context.Context, res gjson.Result) {
-	if value := res.Get("name"); value.Exists() && !data.Name.IsNull() {
+	if value := res.Get("response.ipPoolName"); value.Exists() && !data.Name.IsNull() {
 		data.Name = types.StringValue(value.String())
 	} else {
 		data.Name = types.StringNull()
 	}
-	if value := res.Get("poolType"); value.Exists() && !data.PoolType.IsNull() {
-		data.PoolType = types.StringValue(value.String())
+	if value := res.Get("response.ipPoolType"); value.Exists() && !data.PoolType.IsNull() {
+		data.PoolType = types.StringValue(strings.Title(value.String()))
 	} else {
 		data.PoolType = types.StringNull()
 	}
-	if value := res.Get("addressSpace.subnet"); value.Exists() && !data.AddressSpaceSubnet.IsNull() {
-		data.AddressSpaceSubnet = types.StringValue(value.String())
+	if value := res.Get("response.ipPoolCidr"); value.Exists() && !data.AddressSpaceSubnet.IsNull() {
+		data.AddressSpaceSubnet = types.StringValue(strings.Split(value.String(), "/")[0])
 	} else {
 		data.AddressSpaceSubnet = types.StringNull()
 	}
-	if value := res.Get("addressSpace.prefixLength"); value.Exists() && !data.AddressSpacePrefixLength.IsNull() {
-		data.AddressSpacePrefixLength = types.Int64Value(value.Int())
+	if value := res.Get("response.ipPoolCidr"); value.Exists() && !data.AddressSpacePrefixLength.IsNull() {
+		num, _ := strconv.ParseInt(strings.Split(value.String(), "/")[1], 10, 64)
+		data.AddressSpacePrefixLength = types.Int64Value(num)
 	} else {
 		data.AddressSpacePrefixLength = types.Int64Null()
 	}
-	if value := res.Get("addressSpace.gatewayIpAddress"); value.Exists() && !data.AddressSpaceGateway.IsNull() {
+	if value := res.Get("response.gateways.0"); value.Exists() && !data.AddressSpaceGateway.IsNull() {
 		data.AddressSpaceGateway = types.StringValue(value.String())
 	} else {
 		data.AddressSpaceGateway = types.StringNull()
 	}
-	if value := res.Get("addressSpace.dhcpServers"); value.Exists() && !data.AddressSpaceDhcpServers.IsNull() {
+	if value := res.Get("response.dhcpServerIps"); value.Exists() && !data.AddressSpaceDhcpServers.IsNull() {
 		data.AddressSpaceDhcpServers = helpers.GetStringSet(value.Array())
 	} else {
 		data.AddressSpaceDhcpServers = types.SetNull(types.StringType)
 	}
-	if value := res.Get("addressSpace.dnsServers"); value.Exists() && !data.AddressSpaceDnsServers.IsNull() {
+	if value := res.Get("response.dnsServerIps"); value.Exists() && !data.AddressSpaceDnsServers.IsNull() {
 		data.AddressSpaceDnsServers = helpers.GetStringSet(value.Array())
 	} else {
 		data.AddressSpaceDnsServers = types.SetNull(types.StringType)

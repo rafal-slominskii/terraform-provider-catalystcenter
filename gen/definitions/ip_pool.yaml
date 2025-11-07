@@ -1,8 +1,10 @@
 name: IP Pool
 rest_endpoint: /dna/intent/api/v1/ipam/globalIpAddressPools
+get_rest_endpoint: /api/v2/ippool
 id_from_query_path: response
+get_extra_query_params: "?limit=1000"
 id_from_query_path_attribute: id
-get_from_all: true
+get_requires_id: true
 skip_minimum_test: true
 put_id: true
 import_no_id: true
@@ -16,12 +18,14 @@ attributes:
   match_id: true
   description: The name for this global IP pool. Only letters, numbers, '-', '_', '.', and '/' are allowed.
   example: MyPool1
+  response_data_path: response.ipPoolName
 - model_name: poolType
   type: String
   mandatory: true
   enum_values: [Generic, Tunnel]
   description: The type of the global IP pool. Once created, this cannot be changed.
   example: Generic
+  response_data_path: response.ipPoolType
 - model_name: subnet
   tf_name: address_space_subnet
   data_path: addressSpace
@@ -29,7 +33,7 @@ attributes:
   mandatory: true
   description: The IP address component of the CIDR notation for this subnet.
   example: 192.168.0.0
-  response_data_path: addressSpace.subnet
+  response_data_path: response.ipPoolCidr
 - model_name: prefixLength
   tf_name: address_space_prefix_length
   data_path: addressSpace
@@ -37,14 +41,14 @@ attributes:
   mandatory: true
   description: The network mask component, as a decimal, for the CIDR notation of this subnet.
   example: 16
-  response_data_path: addressSpace.prefixLength
+  response_data_path: response.ipPoolCidr
 - model_name: gatewayIpAddress
   tf_name: address_space_gateway
   data_path: addressSpace
   type: String
   description: The gateway IP address for this subnet.
   example: 192.168.0.1
-  response_data_path: addressSpace.gatewayIpAddress
+  response_data_path: response.gateways.0
 - model_name: dhcpServers
   tf_name: address_space_dhcp_servers
   data_path: addressSpace
@@ -52,7 +56,7 @@ attributes:
   element_type: String
   description: The DHCP server(s) for this subnet.
   example: 192.168.0.10
-  response_data_path: addressSpace.dhcpServers
+  response_data_path: response.dhcpServerIps
 - model_name: dnsServers
   tf_name: address_space_dns_servers
   data_path: addressSpace
@@ -60,4 +64,4 @@ attributes:
   element_type: String
   description: The DNS server(s) for this subnet.
   example: 192.168.0.53
-  response_data_path: addressSpace.dnsServers
+  response_data_path: response.dnsServerIps

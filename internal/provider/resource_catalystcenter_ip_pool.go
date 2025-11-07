@@ -149,12 +149,13 @@ func (r *IPPoolResource) Create(ctx context.Context, req resource.CreateRequest,
 		}
 	}
 	params = ""
-	res, err = r.client.Get(plan.getPath() + params)
+	params += "?limit=1000"
+	res, err = r.client.Get("/api/v2/ippool" + params)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Failed to retrieve object (GET), got error: %s, %s", err, res.String()))
 		return
 	}
-	plan.Id = types.StringValue(res.Get("response.#(name==\"" + plan.Name.ValueString() + "\").id").String())
+	plan.Id = types.StringValue(res.Get("response.#(ipPoolName==\"" + plan.Name.ValueString() + "\").id").String())
 	if !r.AllowExistingOnCreate {
 		tflog.Debug(ctx, fmt.Sprintf("%s: Create finished successfully", plan.Id.ValueString()))
 	} else {
@@ -190,7 +191,9 @@ func (r *IPPoolResource) Read(ctx context.Context, req resource.ReadRequest, res
 	tflog.Debug(ctx, fmt.Sprintf("%s: Beginning Read", state.Id.String()))
 
 	params := ""
-	res, err := r.client.Get(state.getPath() + params)
+	params += "/" + url.QueryEscape(state.Id.ValueString())
+	params += "?limit=1000"
+	res, err := r.client.Get("/api/v2/ippool" + params)
 	if err != nil && (strings.Contains(err.Error(), "StatusCode 404") || strings.Contains(err.Error(), "StatusCode 406") || strings.Contains(err.Error(), "StatusCode 500") || strings.Contains(err.Error(), "StatusCode 400")) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -198,7 +201,7 @@ func (r *IPPoolResource) Read(ctx context.Context, req resource.ReadRequest, res
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Failed to retrieve object (GET), got error: %s, %s", err, res.String()))
 		return
 	}
-	res = res.Get("response.#(id==\"" + state.Id.ValueString() + "\")")
+	// res = res.Get("response")
 
 	// If every attribute is set to null we are dealing with an import operation and therefore reading all attributes
 	if state.isNull(ctx, res) {

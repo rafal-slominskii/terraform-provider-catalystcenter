@@ -21,6 +21,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -119,12 +120,13 @@ func (d *IPPoolDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	tflog.Debug(ctx, fmt.Sprintf("%s: Beginning Read", config.Id.String()))
 
 	params := ""
-	res, err := d.client.Get(config.getPath() + params)
+	params += "/" + url.QueryEscape(config.Id.ValueString())
+	params += "?limit=1000"
+	res, err := d.client.Get("/api/v2/ippool" + params)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Failed to retrieve object, got error: %s", err))
 		return
 	}
-	res = res.Get("response.#(id==\"" + config.Id.ValueString() + "\")")
 
 	config.fromBody(ctx, res)
 
