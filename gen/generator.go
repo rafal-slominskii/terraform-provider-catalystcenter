@@ -98,6 +98,7 @@ type YamlConfig struct {
 	NoResource                  bool                  `yaml:"no_resource"`
 	NoDataSource                bool                  `yaml:"no_data_source"`
 	RestEndpoint                string                `yaml:"rest_endpoint"`
+	DevGetRestEndpoint          string                `yaml:"dev_get_rest_endpoint"`
 	GetRestEndpoint             string                `yaml:"get_rest_endpoint"`
 	PutRestEndpoint             string                `yaml:"put_rest_endpoint"`
 	DeleteRestEndpoint          string                `yaml:"delete_rest_endpoint"`

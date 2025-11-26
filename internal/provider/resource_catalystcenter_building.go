@@ -50,6 +50,7 @@ func NewBuildingResource() resource.Resource {
 type BuildingResource struct {
 	client                *cc.Client
 	AllowExistingOnCreate bool
+	DevMode               bool
 }
 
 func (r *BuildingResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -104,6 +105,7 @@ func (r *BuildingResource) Configure(_ context.Context, req resource.ConfigureRe
 
 	r.client = req.ProviderData.(*CcProviderData).Client
 	r.AllowExistingOnCreate = req.ProviderData.(*CcProviderData).AllowExistingOnCreate
+	r.DevMode = req.ProviderData.(*CcProviderData).DevMode
 }
 
 // End of section. //template:end model
@@ -177,7 +179,11 @@ func (r *BuildingResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	params := ""
 	params += "/" + url.QueryEscape(state.Id.ValueString())
-	res, err := r.client.Get(state.getPath() + params)
+	if r.DevMode {
+		res, err = r.client.Get("/dna/intent/api/v2/buildings" + params)
+	} else {
+		res, err := r.client.Get(state.getPath() + params)
+	}
 	if err != nil && (strings.Contains(err.Error(), "StatusCode 404") || strings.Contains(err.Error(), "StatusCode 406") || strings.Contains(err.Error(), "StatusCode 500") || strings.Contains(err.Error(), "StatusCode 400")) {
 		resp.State.RemoveResource(ctx)
 		return

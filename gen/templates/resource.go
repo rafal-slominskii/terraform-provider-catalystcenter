@@ -62,6 +62,8 @@ func New{{camelCase .Name}}Resource() resource.Resource {
 type {{camelCase .Name}}Resource struct {
 	client *cc.Client
 	AllowExistingOnCreate bool
+	DevMode               bool 
+
 }
 
 func (r *{{camelCase .Name}}Resource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -463,6 +465,7 @@ func (r *{{camelCase .Name}}Resource) Configure(_ context.Context, req resource.
 
 	r.client = req.ProviderData.(*CcProviderData).Client
 	r.AllowExistingOnCreate = req.ProviderData.(*CcProviderData).AllowExistingOnCreate
+	r.DevMode = req.ProviderData.(*CcProviderData).DevMode
 }
 // End of section. //template:end model
 
@@ -624,7 +627,15 @@ func (r *{{camelCase .Name}}Resource) Create(ctx context.Context, req resource.C
 	{{- if .GetExtraQueryParams}}
 	params += "{{.GetExtraQueryParams}}"
 	{{- end}}
+	{{- if .DevGetRestEndpoint}}
+	if r.DevMode  {
+		res, err = r.client.Get("{{.DevGetRestEndpoint}}" + params)
+	} else {
+		res, err = r.client.Get({{if .GetRestEndpoint}}"{{.GetRestEndpoint}}"{{else}}plan.getPath(){{end}} + params)
+	}
+	{{- else }}
 	res, err = r.client.Get({{if .GetRestEndpoint}}"{{.GetRestEndpoint}}"{{else}}plan.getPath(){{end}} + params)
+	{{- end}}
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Failed to retrieve object (GET), got error: %s, %s", err, res.String()))
 		return
@@ -656,7 +667,15 @@ func (r *{{camelCase .Name}}Resource) Create(ctx context.Context, req resource.C
 	{{- if .GetExtraQueryParams}}
 	params += "{{.GetExtraQueryParams}}"
 	{{- end}}
+	{{- if .DevGetRestEndpoint}}
+	if r.DevMode  {
+		res, err = r.client.Get("{{.DevGetRestEndpoint}}" + params)
+	} else {
+		res, err = r.client.Get({{if .GetRestEndpoint}}"{{.GetRestEndpoint}}"{{else}}plan.getPath(){{end}} + params)
+	}
+	{{- else }}
 	res, err = r.client.Get({{if .GetRestEndpoint}}"{{.GetRestEndpoint}}"{{else}}plan.getPath(){{end}} + params)
+	{{- end}}
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Failed to retrieve object (GET), got error: %s, %s", err, res.String()))
 		return
@@ -762,7 +781,15 @@ func (r *{{camelCase .Name}}Resource) Read(ctx context.Context, req resource.Rea
 	{{- if .GetExtraQueryParams}}
 	params += "{{.GetExtraQueryParams}}"
 	{{- end}}
+	{{- if .DevGetRestEndpoint}}
+	if r.DevMode  {
+		res, err = r.client.Get("{{.DevGetRestEndpoint}}" + params)
+	} else {
+		res, err := r.client.Get({{if .GetRestEndpoint}}"{{.GetRestEndpoint}}"{{else}}state.getPath(){{end}} + params)
+	}
+	{{- else}}
 	res, err := r.client.Get({{if .GetRestEndpoint}}"{{.GetRestEndpoint}}"{{else}}state.getPath(){{end}} + params)
+	{{- end}}
 	if err != nil && (strings.Contains(err.Error(), "StatusCode 404") || strings.Contains(err.Error(), "StatusCode 406") || strings.Contains(err.Error(), "StatusCode 500") || strings.Contains(err.Error(), "StatusCode 400")) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -1104,7 +1131,15 @@ func (r *{{camelCase .Name}}Resource) Update(ctx context.Context, req resource.U
 		{{- if .GetExtraQueryParams}}
 		params += "{{.GetExtraQueryParams}}"
 		{{- end}}
+		{{- if .DevGetRestEndpoint}}
+		if r.DevMode  {
+			res, err = r.client.Get("{{.DevGetRestEndpoint}}" + params)
+		} else {
+			res, err = r.client.Get({{if .GetRestEndpoint}}"{{.GetRestEndpoint}}"{{else}}plan.getPath(){{end}} + params)
+		}
+		{{- else }}
 		res, err = r.client.Get({{if .GetRestEndpoint}}"{{.GetRestEndpoint}}"{{else}}plan.getPath(){{end}} + params)
+		{{- end}}
 		if err != nil {
 			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Failed to retrieve object (GET), got error: %s, %s", err, res.String()))
 			return
@@ -1193,7 +1228,15 @@ func (r *{{camelCase .Name}}Resource) Update(ctx context.Context, req resource.U
 		{{- if .GetExtraQueryParams}}
 		getParams += "{{.GetExtraQueryParams}}"
 		{{- end}}
+		{{- if .DevGetRestEndpoint}}
+		if r.DevMode  {
+			getRes, err := r.client.Get("{{.DevGetRestEndpoint}}" + getParams)
+		} else {
+			getRes, err := r.client.Get({{if .GetRestEndpoint}}"{{.GetRestEndpoint}}"{{else}}state.getPath(){{end}} + getParams)
+		}
+		{{- else}}
 		getRes, err := r.client.Get({{if .GetRestEndpoint}}"{{.GetRestEndpoint}}"{{else}}state.getPath(){{end}} + getParams)
+		{{- end}}
 		if err != nil && (strings.Contains(err.Error(), "StatusCode 404") || strings.Contains(err.Error(), "StatusCode 406") || strings.Contains(err.Error(), "StatusCode 500") || strings.Contains(err.Error(), "StatusCode 400")) {
 			resp.State.RemoveResource(ctx)
 			return

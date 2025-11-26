@@ -52,6 +52,7 @@ func NewFabricL3HandoffSDATransitResource() resource.Resource {
 type FabricL3HandoffSDATransitResource struct {
 	client                *cc.Client
 	AllowExistingOnCreate bool
+	DevMode               bool
 }
 
 func (r *FabricL3HandoffSDATransitResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -125,6 +126,7 @@ func (r *FabricL3HandoffSDATransitResource) Configure(_ context.Context, req res
 
 	r.client = req.ProviderData.(*CcProviderData).Client
 	r.AllowExistingOnCreate = req.ProviderData.(*CcProviderData).AllowExistingOnCreate
+	r.DevMode = req.ProviderData.(*CcProviderData).DevMode
 }
 
 // End of section. //template:end model

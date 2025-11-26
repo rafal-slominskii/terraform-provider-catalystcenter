@@ -53,6 +53,7 @@ func NewUpdateAuthenticationProfileResource() resource.Resource {
 type UpdateAuthenticationProfileResource struct {
 	client                *cc.Client
 	AllowExistingOnCreate bool
+	DevMode               bool
 }
 
 func (r *UpdateAuthenticationProfileResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -161,6 +162,7 @@ func (r *UpdateAuthenticationProfileResource) Configure(_ context.Context, req r
 
 	r.client = req.ProviderData.(*CcProviderData).Client
 	r.AllowExistingOnCreate = req.ProviderData.(*CcProviderData).AllowExistingOnCreate
+	r.DevMode = req.ProviderData.(*CcProviderData).DevMode
 }
 
 // End of section. //template:end model

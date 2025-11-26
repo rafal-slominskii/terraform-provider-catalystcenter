@@ -3,6 +3,7 @@ name: str() # Name of the resource
 no_resource: bool(required=False) # Set to true if no resource should be created
 no_data_source: bool(required=False) # Set to true if no data source should be created
 rest_endpoint: str() # REST endpoint path
+dev_get_rest_endpoint: str() # alternative get REST endpoint path used in dev mode
 get_rest_endpoint: str(required=False) # Override GET REST endpoint path
 put_rest_endpoint: str(required=False) # Override PUT REST endpoint path
 delete_rest_endpoint: str(required=False) # Override DELETE REST endpoint path

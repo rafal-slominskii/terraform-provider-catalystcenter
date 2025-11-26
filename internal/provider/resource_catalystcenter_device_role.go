@@ -48,6 +48,7 @@ func NewDeviceRoleResource() resource.Resource {
 type DeviceRoleResource struct {
 	client                *cc.Client
 	AllowExistingOnCreate bool
+	DevMode               bool
 }
 
 func (r *DeviceRoleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -99,6 +100,7 @@ func (r *DeviceRoleResource) Configure(_ context.Context, req resource.Configure
 
 	r.client = req.ProviderData.(*CcProviderData).Client
 	r.AllowExistingOnCreate = req.ProviderData.(*CcProviderData).AllowExistingOnCreate
+	r.DevMode = req.ProviderData.(*CcProviderData).DevMode
 }
 
 // End of section. //template:end model

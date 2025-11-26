@@ -52,6 +52,7 @@ func NewIPPoolResource() resource.Resource {
 type IPPoolResource struct {
 	client                *cc.Client
 	AllowExistingOnCreate bool
+	DevMode               bool
 }
 
 func (r *IPPoolResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -118,6 +119,7 @@ func (r *IPPoolResource) Configure(_ context.Context, req resource.ConfigureRequ
 
 	r.client = req.ProviderData.(*CcProviderData).Client
 	r.AllowExistingOnCreate = req.ProviderData.(*CcProviderData).AllowExistingOnCreate
+	r.DevMode = req.ProviderData.(*CcProviderData).DevMode
 }
 
 // End of section. //template:end model
@@ -149,7 +151,11 @@ func (r *IPPoolResource) Create(ctx context.Context, req resource.CreateRequest,
 		}
 	}
 	params = ""
-	res, err = r.client.Get(plan.getPath() + params)
+	if r.DevMode {
+		res, err = r.client.Get("/api/v2/ippool?limit=1000" + params)
+	} else {
+		res, err = r.client.Get(plan.getPath() + params)
+	}
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Failed to retrieve object (GET), got error: %s, %s", err, res.String()))
 		return
@@ -190,7 +196,11 @@ func (r *IPPoolResource) Read(ctx context.Context, req resource.ReadRequest, res
 	tflog.Debug(ctx, fmt.Sprintf("%s: Beginning Read", state.Id.String()))
 
 	params := ""
-	res, err := r.client.Get(state.getPath() + params)
+	if r.DevMode {
+		res, err = r.client.Get("/api/v2/ippool?limit=1000" + params)
+	} else {
+		res, err := r.client.Get(state.getPath() + params)
+	}
 	if err != nil && (strings.Contains(err.Error(), "StatusCode 404") || strings.Contains(err.Error(), "StatusCode 406") || strings.Contains(err.Error(), "StatusCode 500") || strings.Contains(err.Error(), "StatusCode 400")) {
 		resp.State.RemoveResource(ctx)
 		return

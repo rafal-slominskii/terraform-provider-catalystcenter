@@ -1,6 +1,7 @@
 ---
 name: Building
 rest_endpoint: /dna/intent/api/v2/buildings
+dev_get_rest_endpoint: /dna/intent/api/v2/buildings
 doc_category: Sites
 id_path: response.data
 allow_existing_on_create: true

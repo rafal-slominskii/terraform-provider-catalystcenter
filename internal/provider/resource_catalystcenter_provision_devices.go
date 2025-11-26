@@ -52,6 +52,7 @@ func NewProvisionDevicesResource() resource.Resource {
 type ProvisionDevicesResource struct {
 	client                *cc.Client
 	AllowExistingOnCreate bool
+	DevMode               bool
 }
 
 func (r *ProvisionDevicesResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -113,6 +114,7 @@ func (r *ProvisionDevicesResource) Configure(_ context.Context, req resource.Con
 
 	r.client = req.ProviderData.(*CcProviderData).Client
 	r.AllowExistingOnCreate = req.ProviderData.(*CcProviderData).AllowExistingOnCreate
+	r.DevMode = req.ProviderData.(*CcProviderData).DevMode
 }
 
 // End of section. //template:end model

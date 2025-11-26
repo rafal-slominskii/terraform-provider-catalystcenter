@@ -52,6 +52,7 @@ func NewFabricMulticastVirtualNetworkResource() resource.Resource {
 type FabricMulticastVirtualNetworkResource struct {
 	client                *cc.Client
 	AllowExistingOnCreate bool
+	DevMode               bool
 }
 
 func (r *FabricMulticastVirtualNetworkResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -154,6 +155,7 @@ func (r *FabricMulticastVirtualNetworkResource) Configure(_ context.Context, req
 
 	r.client = req.ProviderData.(*CcProviderData).Client
 	r.AllowExistingOnCreate = req.ProviderData.(*CcProviderData).AllowExistingOnCreate
+	r.DevMode = req.ProviderData.(*CcProviderData).DevMode
 }
 
 // End of section. //template:end model

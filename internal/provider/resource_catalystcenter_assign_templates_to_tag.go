@@ -50,6 +50,7 @@ func NewAssignTemplatesToTagResource() resource.Resource {
 type AssignTemplatesToTagResource struct {
 	client                *cc.Client
 	AllowExistingOnCreate bool
+	DevMode               bool
 }
 
 func (r *AssignTemplatesToTagResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -92,6 +93,7 @@ func (r *AssignTemplatesToTagResource) Configure(_ context.Context, req resource
 
 	r.client = req.ProviderData.(*CcProviderData).Client
 	r.AllowExistingOnCreate = req.ProviderData.(*CcProviderData).AllowExistingOnCreate
+	r.DevMode = req.ProviderData.(*CcProviderData).DevMode
 }
 
 // End of section. //template:end model

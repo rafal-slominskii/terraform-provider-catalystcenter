@@ -48,6 +48,7 @@ func NewPNPConfigPreviewResource() resource.Resource {
 type PNPConfigPreviewResource struct {
 	client                *cc.Client
 	AllowExistingOnCreate bool
+	DevMode               bool
 }
 
 func (r *PNPConfigPreviewResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -93,6 +94,7 @@ func (r *PNPConfigPreviewResource) Configure(_ context.Context, req resource.Con
 
 	r.client = req.ProviderData.(*CcProviderData).Client
 	r.AllowExistingOnCreate = req.ProviderData.(*CcProviderData).AllowExistingOnCreate
+	r.DevMode = req.ProviderData.(*CcProviderData).DevMode
 }
 
 // End of section. //template:end model

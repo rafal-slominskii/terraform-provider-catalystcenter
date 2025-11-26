@@ -52,12 +52,14 @@ type CcProviderModel struct {
 	Retries  types.Int64  `tfsdk:"retries"`
 	MaxTimeout types.Int64 `tfsdk:"max_timeout"`
 	AllowExistingOnCreate types.Bool   `tfsdk:"allow_existing_on_create"`
+	DevMode               types.Bool         `tfsdk:"dev_mode"`
 }
 
 // CcProviderData describes the data maintained by the provider.
 type CcProviderData struct {
 	Client *cc.Client
 	AllowExistingOnCreate bool
+	DevMode bool
 }
 
 // Metadata returns the provider type name.
@@ -237,6 +239,27 @@ func (p *CcProvider) Configure(ctx context.Context, req provider.ConfigureReques
 		allow_existing_on_create = config.AllowExistingOnCreate.ValueBool()
 	}
 
+	var dev_mode bool
+	if config.DevMode.IsUnknown() {
+		// Cannot connect to client with an unknown value
+		resp.Diagnostics.AddWarning(
+			"Unable to create client",
+			"Cannot use unknown value as dev_moce",
+		)
+		return
+	}
+
+	if config.AllowExistingOnCreate.IsNull() {
+		dev_modeStr := os.Getenv("CC_DEV_MODE")
+		if dev_modeStr == "" {
+			dev_mode = false
+		} else {
+			dev_mode, _ = strconv.ParseBool(dev_modeStr)
+		}
+	} else {
+		dev_mode = config.DevMode.ValueBool()
+	}
+
 
 	var retries int64
 	if config.Retries.IsUnknown() {
@@ -290,7 +313,7 @@ func (p *CcProvider) Configure(ctx context.Context, req provider.ConfigureReques
 		return
 	}
 
-	data := CcProviderData{Client: &c, AllowExistingOnCreate: allow_existing_on_create}
+	data := CcProviderData{Client: &c, AllowExistingOnCreate: allow_existing_on_create, DevMode: dev_mode}
 	resp.DataSourceData = &data
 	resp.ResourceData = &data
 }

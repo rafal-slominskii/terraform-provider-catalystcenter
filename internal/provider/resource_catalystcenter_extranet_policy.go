@@ -50,6 +50,7 @@ func NewExtranetPolicyResource() resource.Resource {
 type ExtranetPolicyResource struct {
 	client                *cc.Client
 	AllowExistingOnCreate bool
+	DevMode               bool
 }
 
 func (r *ExtranetPolicyResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -101,6 +102,7 @@ func (r *ExtranetPolicyResource) Configure(_ context.Context, req resource.Confi
 
 	r.client = req.ProviderData.(*CcProviderData).Client
 	r.AllowExistingOnCreate = req.ProviderData.(*CcProviderData).AllowExistingOnCreate
+	r.DevMode = req.ProviderData.(*CcProviderData).DevMode
 }
 
 // End of section. //template:end model
