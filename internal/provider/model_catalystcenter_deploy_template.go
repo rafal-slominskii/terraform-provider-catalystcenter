@@ -52,23 +52,25 @@ type DeployTemplateMemberTemplateDeploymentInfo struct {
 }
 
 type DeployTemplateTargetInfo struct {
-	HostName            types.String                             `tfsdk:"host_name"`
-	Redeploy            types.String                             `tfsdk:"redeploy"`
-	Id                  types.String                             `tfsdk:"id"`
-	Params              types.Map                                `tfsdk:"params"`
-	ResourceParams      []DeployTemplateTargetInfoResourceParams `tfsdk:"resource_params"`
-	Type                types.String                             `tfsdk:"type"`
-	VersionedTemplateId types.String                             `tfsdk:"versioned_template_id"`
+	HostName              types.String                             `tfsdk:"host_name"`
+	Redeploy              types.String                             `tfsdk:"redeploy"`
+	Id                    types.String                             `tfsdk:"id"`
+	Params                types.Map                                `tfsdk:"params"`
+	ResourceParams        []DeployTemplateTargetInfoResourceParams `tfsdk:"resource_params"`
+	Type                  types.String                             `tfsdk:"type"`
+	VersionedTemplateId   types.String                             `tfsdk:"versioned_template_id"`
+	LastDeploySuccessful  types.Bool                               `tfsdk:"last_deploy_successful"`
 }
 
 type DeployTemplateMemberTemplateDeploymentInfoTargetInfo struct {
-	HostName            types.String                                                         `tfsdk:"host_name"`
-	Redeploy            types.String                                                         `tfsdk:"redeploy"`
-	Id                  types.String                                                         `tfsdk:"id"`
-	Params              types.Map                                                            `tfsdk:"params"`
-	ResourceParams      []DeployTemplateMemberTemplateDeploymentInfoTargetInfoResourceParams `tfsdk:"resource_params"`
-	Type                types.String                                                         `tfsdk:"type"`
-	VersionedTemplateId types.String                                                         `tfsdk:"versioned_template_id"`
+	HostName              types.String                                                         `tfsdk:"host_name"`
+	Redeploy              types.String                                                         `tfsdk:"redeploy"`
+	Id                    types.String                                                         `tfsdk:"id"`
+	Params                types.Map                                                            `tfsdk:"params"`
+	ResourceParams        []DeployTemplateMemberTemplateDeploymentInfoTargetInfoResourceParams `tfsdk:"resource_params"`
+	Type                  types.String                                                         `tfsdk:"type"`
+	VersionedTemplateId   types.String                                                         `tfsdk:"versioned_template_id"`
+	LastDeploySuccessful  types.Bool                                                           `tfsdk:"last_deploy_successful"`
 }
 
 type DeployTemplateTargetInfoResourceParams struct {

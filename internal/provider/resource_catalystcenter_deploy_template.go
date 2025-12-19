@@ -185,6 +185,10 @@ func (r *DeployTemplateResource) Schema(ctx context.Context, req resource.Schema
 										MarkdownDescription: helpers.NewAttributeDescription("Versioned template ID to be provisioned").String,
 										Optional:            true,
 									},
+									"last_deploy_successful": schema.BoolAttribute{
+										MarkdownDescription: helpers.NewAttributeDescription("Indicates whether the last deployment attempt to this device was successful").String,
+										Computed:            true,
+									},
 								},
 							},
 						},
@@ -250,6 +254,10 @@ func (r *DeployTemplateResource) Schema(ctx context.Context, req resource.Schema
 							MarkdownDescription: helpers.NewAttributeDescription("Versioned template ID to be provisioned").String,
 							Optional:            true,
 						},
+						"last_deploy_successful": schema.BoolAttribute{
+							MarkdownDescription: helpers.NewAttributeDescription("Indicates whether the last deployment attempt to this device was successful").String,
+							Computed:            true,
+						},
 					},
 				},
 			},
@@ -283,19 +291,45 @@ func (r *DeployTemplateResource) Create(ctx context.Context, req resource.Create
 	// As per requirement, plan.Id should always be TemplateId
 	plan.Id = types.StringValue(fmt.Sprint(plan.TemplateId.ValueString()))
 
-	// Create object body
-	body := plan.toBody(ctx, DeployTemplate{})
+	// Filter to get only reachable devices for deployment
+	reachableTargets := r.filterReachableDevices(ctx, plan.TargetInfo, &resp.Diagnostics)
+	if len(reachableTargets) == 0 {
+		resp.Diagnostics.AddWarning("No Reachable Devices", "All target devices are unreachable. No deployment will be performed.")
+		// Mark all targets as unsuccessful since none were deployed
+		for i := range plan.TargetInfo {
+			plan.TargetInfo[i].LastDeploySuccessful = types.BoolValue(false)
+		}
+		diags = resp.State.Set(ctx, &plan)
+		resp.Diagnostics.Append(diags...)
+		return
+	}
 
-	for _, v := range plan.TargetInfo {
+	// Create a temporary plan with only reachable targets for deployment
+	tempPlan := plan
+	tempPlan.TargetInfo = reachableTargets
+
+	// Create object body
+	body := tempPlan.toBody(ctx, DeployTemplate{})
+
+	for _, v := range reachableTargets {
 		tflog.Debug(ctx, fmt.Sprintf("create deploying target id: %s", v.Id))
 	}
-	postPath := plan.getPath() // params is an empty string in the original code, so just getPath() is sufficient.
+	postPath := tempPlan.getPath() // params is an empty string in the original code, so just getPath() is sufficient.
 
 	// Perform deployment and monitor status using the new helper
 	deploymentSuccess := r.performDeploymentAndMonitorStatus(ctx, postPath, body, &resp.Diagnostics)
 	if !deploymentSuccess {
+		// Mark all as unsuccessful since deployment failed
+		for i := range plan.TargetInfo {
+			plan.TargetInfo[i].LastDeploySuccessful = types.BoolValue(false)
+		}
+		diags = resp.State.Set(ctx, &plan)
+		resp.Diagnostics.Append(diags...)
 		return
 	}
+
+	// Update deployment status: mark which devices were successfully deployed
+	r.updateDeploymentStatus(ctx, &plan, reachableTargets)
 
 	tflog.Debug(ctx, fmt.Sprintf("%s: Create finished successfully", plan.Id.ValueString()))
 
@@ -360,6 +394,7 @@ func (r *DeployTemplateResource) Update(ctx context.Context, req resource.Update
 	for _, planTarget := range plan.TargetInfo {
 		found := false
 		changed := false
+		lastDeployFailed := false
 
 		for _, stateTarget := range state.TargetInfo {
 			if targetsMatch(planTarget, stateTarget) {
@@ -367,6 +402,11 @@ func (r *DeployTemplateResource) Update(ctx context.Context, req resource.Update
 				// Check if any attributes changed
 				if targetChanged(planTarget, stateTarget) {
 					changed = true
+				}
+				// Check if last deployment failed
+				if !stateTarget.LastDeploySuccessful.IsNull() && !stateTarget.LastDeploySuccessful.ValueBool() {
+					lastDeployFailed = true
+					tflog.Debug(ctx, fmt.Sprintf("Device %s had failed deployment, will retry", stateTarget.Id.ValueString()))
 				}
 				break
 			}
@@ -379,11 +419,13 @@ func (r *DeployTemplateResource) Update(ctx context.Context, req resource.Update
 		}
 
 		tflog.Debug(ctx, fmt.Sprintf("redeployaa: %s: %v", planTarget.Id.ValueString(), redeploy))
-		// Add to redeploy list if new or changed
-		if !found || changed && redeploy == "ON_CHANGE" || redeploy == "ALWAYS" {
+		// Add to redeploy list if new, changed, failed last time, or redeploy policy requires it
+		if !found || changed && redeploy == "ON_CHANGE" || redeploy == "ALWAYS" || lastDeployFailed {
 			targetInfoToRedeploy = append(targetInfoToRedeploy, planTarget)
 			if !found {
 				tflog.Debug(ctx, fmt.Sprintf("New target_info item detected: %s", planTarget.Id.ValueString()))
+			} else if lastDeployFailed {
+				tflog.Debug(ctx, fmt.Sprintf("Retrying previously failed target_info item: %s", planTarget.Id.ValueString()))
 			} else {
 				tflog.Debug(ctx, fmt.Sprintf("Changed target_info item detected: %s", planTarget.Id.ValueString()))
 			}
@@ -406,9 +448,37 @@ func (r *DeployTemplateResource) Update(ctx context.Context, req resource.Update
 
 	// Deploy to changed/new targets
 	if len(targetInfoToRedeploy) > 0 {
-		success := r.deployTargets(ctx, &plan, targetInfoToRedeploy, &resp.Diagnostics) // Pass resp.Diagnostics
-		if !success {
-			return
+		// Filter to get only reachable devices for deployment
+		reachableTargets := r.filterReachableDevices(ctx, targetInfoToRedeploy, &resp.Diagnostics)
+		if len(reachableTargets) == 0 {
+			tflog.Warn(ctx, "All target devices that need redeployment are unreachable. No deployment will be performed.")
+			// Mark the unreachable devices that needed redeployment as unsuccessful
+			for i := range plan.TargetInfo {
+				for _, unreachable := range targetInfoToRedeploy {
+					if targetsMatch(plan.TargetInfo[i], unreachable) {
+						plan.TargetInfo[i].LastDeploySuccessful = types.BoolValue(false)
+						break
+					}
+				}
+			}
+		} else {
+			success := r.deployTargets(ctx, &plan, reachableTargets, &resp.Diagnostics)
+			if !success {
+				// Mark attempted devices as unsuccessful
+				for i := range plan.TargetInfo {
+					for _, attempted := range targetInfoToRedeploy {
+						if targetsMatch(plan.TargetInfo[i], attempted) {
+							plan.TargetInfo[i].LastDeploySuccessful = types.BoolValue(false)
+							break
+						}
+					}
+				}
+				diags = resp.State.Set(ctx, &plan)
+				resp.Diagnostics.Append(diags...)
+				return
+			}
+			// Update deployment status for redeployed devices
+			r.updateDeploymentStatus(ctx, &plan, reachableTargets)
 		}
 	} else {
 		tflog.Debug(ctx, "No target_info items need redeployment")
@@ -439,6 +509,79 @@ func (r *DeployTemplateResource) Delete(ctx context.Context, req resource.Delete
 }
 
 // End of section. //template:end delete
+
+// Helper function to filter out unreachable devices from target list
+func (r *DeployTemplateResource) filterReachableDevices(ctx context.Context, targets []DeployTemplateTargetInfo, diag *diag.Diagnostics) []DeployTemplateTargetInfo {
+	if len(targets) == 0 {
+		return targets
+	}
+
+	// Get device health status from API
+	healthURL := "/dna/intent/api/v1/device-health"
+	healthRes, err := r.client.Get(healthURL)
+	if err != nil {
+		tflog.Warn(ctx, fmt.Sprintf("Failed to retrieve device health status: %s. Proceeding without filtering.", err))
+		return targets
+	}
+
+	// Build a map of device UUID to reachability status
+	deviceHealthMap := make(map[string]string)
+	devices := healthRes.Get("response").Array()
+	for _, device := range devices {
+		uuid := device.Get("uuid").String()
+		reachability := device.Get("reachabilityHealth").String()
+		if uuid != "" {
+			deviceHealthMap[uuid] = reachability
+		}
+	}
+
+	// Filter out unreachable devices
+	var reachableTargets []DeployTemplateTargetInfo
+	for _, target := range targets {
+		if target.Id.IsNull() || target.Id.ValueString() == "" {
+			// If no ID is set, keep the target (might be hostname-based)
+			reachableTargets = append(reachableTargets, target)
+			continue
+		}
+
+		targetId := target.Id.ValueString()
+		reachability, found := deviceHealthMap[targetId]
+
+		if !found {
+			// Device not found in health check, keep it anyway with a warning
+			tflog.Warn(ctx, fmt.Sprintf("Device %s not found in health check response. Including in deployment.", targetId))
+			reachableTargets = append(reachableTargets, target)
+		} else if reachability == "UNREACHABLE" {
+			// Skip unreachable devices
+			tflog.Warn(ctx, fmt.Sprintf("Device %s is UNREACHABLE. Excluding from deployment.", targetId))
+		} else {
+			// Device is reachable, include it
+			reachableTargets = append(reachableTargets, target)
+		}
+	}
+
+	tflog.Debug(ctx, fmt.Sprintf("Filtered targets: %d reachable out of %d total", len(reachableTargets), len(targets)))
+	return reachableTargets
+}
+
+// Helper function to mark deployment status for targets
+func (r *DeployTemplateResource) updateDeploymentStatus(ctx context.Context, plan *DeployTemplate, deployedTargets []DeployTemplateTargetInfo) {
+	// Set all targets to unsuccessful first
+	for i := range plan.TargetInfo {
+		plan.TargetInfo[i].LastDeploySuccessful = types.BoolValue(false)
+	}
+
+	// Mark successfully deployed targets
+	for _, deployed := range deployedTargets {
+		for i := range plan.TargetInfo {
+			if targetsMatch(plan.TargetInfo[i], deployed) {
+				plan.TargetInfo[i].LastDeploySuccessful = types.BoolValue(true)
+				tflog.Debug(ctx, fmt.Sprintf("Marked device %s as successfully deployed", plan.TargetInfo[i].Id.ValueString()))
+				break
+			}
+		}
+	}
+}
 
 // Helper function to check if two target_info items match (same device)
 func targetsMatch(target1, target2 DeployTemplateTargetInfo) bool {
