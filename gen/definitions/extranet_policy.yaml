@@ -22,6 +22,7 @@ attributes:
   - model_name: fabricIds
     data_path: "0"
     response_data_path: response.0.fabricIds
+    requires_replace: true
     description: IDs of the fabric sites to be associated with this extranet policy
     type: Set
     element_type: String
