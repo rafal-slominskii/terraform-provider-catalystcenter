@@ -20,6 +20,7 @@ package provider
 // Section below is generated&owned by "gen/generator.go". //template:begin imports
 import (
 	"context"
+	"strings"
 
 	"github.com/CiscoDevNet/terraform-provider-catalystcenter/internal/provider/helpers"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -84,6 +85,93 @@ type DeployTemplateMemberTemplateDeploymentInfoTargetInfoResourceParams struct {
 }
 
 // End of section. //template:end types
+
+// processParamsField converts params map to appropriate JSON format
+// Supports map, list, or string output based on __list key presence
+//
+// Schema: Map[String]Map[String]String
+//
+// Examples:
+//
+//	params = { interface = { "0" = "value" } } → {"interface": "value"}
+//	params = { vlans = { "0" = "10", "1" = "20" } } → {"vlans": {"0": "10", "1": "20"}} (map)
+//	params = { interfaces = { __list = "val1,val2,val3" } } → {"interfaces": ["val1", "val2", "val3"]}
+//	params = { __list = { "0" = "val1", "1" = "val2" } } → ["val1", "val2"] (entire params as array)
+func processParamsField(ctx context.Context, params types.Map) any {
+	if params.IsNull() {
+		return nil
+	}
+
+	var mapValues map[string]types.Map
+	params.ElementsAs(ctx, &mapValues, false)
+
+	// Check for special __list key handling (params itself becomes array/string)
+	if len(mapValues) == 1 {
+		if specialMap, ok := mapValues["__list"]; ok {
+			var strMap map[string]string
+			specialMap.ElementsAs(ctx, &strMap, false)
+
+			// If __list map has a special "__list" key, use its value directly
+			if listStr, hasListKey := strMap["__list"]; hasListKey {
+				// Split comma-separated values
+				if listStr == "" {
+					return []string{}
+				}
+				parts := strings.Split(listStr, ",")
+				if len(parts) == 1 {
+					return parts[0]
+				}
+				return parts
+			}
+
+			// Otherwise, convert map to array (ordered by numeric keys)
+			strList := make([]string, 0, len(strMap))
+			for _, v := range strMap {
+				strList = append(strList, v)
+			}
+
+			if len(strList) == 0 {
+				return []string{}
+			} else if len(strList) == 1 {
+				return strList[0]
+			} else {
+				return strList
+			}
+		}
+	}
+
+	// Default: return as map of parameters
+	result := make(map[string]any)
+	for paramName, paramValue := range mapValues {
+		var strMap map[string]string
+		paramValue.ElementsAs(ctx, &strMap, false)
+
+		// Check if this parameter value has __list key (indicates array)
+		if listStr, hasListKey := strMap["__list"]; hasListKey {
+			// Split comma-separated values into array
+			if listStr == "" {
+				result[paramName] = []string{}
+			} else {
+				parts := strings.Split(listStr, ",")
+				if len(parts) == 1 {
+					result[paramName] = parts[0]
+				} else {
+					result[paramName] = parts
+				}
+			}
+		} else if len(strMap) == 1 {
+			// Single key-value, unwrap it
+			for _, val := range strMap {
+				result[paramName] = val
+				break
+			}
+		} else {
+			// Multiple keys, send as map
+			result[paramName] = strMap
+		}
+	}
+	return result
+}
 
 // Section below is generated&owned by "gen/generator.go". //template:begin getPath
 func (data DeployTemplate) getPath() string {
@@ -155,19 +243,8 @@ func (data DeployTemplate) toBody(ctx context.Context, state DeployTemplate) str
 						itemChildBody, _ = sjson.Set(itemChildBody, "id", childItem.Id.ValueString())
 					}
 					if !childItem.Params.IsNull() {
-						var listValues map[string]types.List
-						childItem.Params.ElementsAs(ctx, &listValues, false)
-						params := make(map[string]any)
-						for k, v := range listValues {
-							var strList []string
-							v.ElementsAs(ctx, &strList, false)
-							if len(strList) == 1 {
-								params[k] = strList[0]
-							} else {
-								params[k] = strList
-							}
-						}
-						itemChildBody, _ = sjson.Set(itemChildBody, "params", params)
+						processedParams := processParamsField(ctx, childItem.Params)
+						itemChildBody, _ = sjson.Set(itemChildBody, "params", processedParams)
 					}
 					if len(childItem.ResourceParams) > 0 {
 						itemChildBody, _ = sjson.Set(itemChildBody, "resourceParams", []interface{}{})
@@ -211,19 +288,8 @@ func (data DeployTemplate) toBody(ctx context.Context, state DeployTemplate) str
 				itemBody, _ = sjson.Set(itemBody, "id", item.Id.ValueString())
 			}
 			if !item.Params.IsNull() {
-				var listValues map[string]types.List
-				item.Params.ElementsAs(ctx, &listValues, false)
-				params := make(map[string]any)
-				for k, v := range listValues {
-					var strList []string
-					v.ElementsAs(ctx, &strList, false)
-					if len(strList) == 1 {
-						params[k] = strList[0]
-					} else {
-						params[k] = strList
-					}
-				}
-				itemBody, _ = sjson.Set(itemBody, "params", params)
+				processedParams := processParamsField(ctx, item.Params)
+				itemBody, _ = sjson.Set(itemBody, "params", processedParams)
 			}
 			if len(item.ResourceParams) > 0 {
 				itemBody, _ = sjson.Set(itemBody, "resourceParams", []interface{}{})
